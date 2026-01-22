@@ -2472,7 +2472,7 @@ void U1_InitAposteriori(void)
    Andernfalls wird FALSE zurueckgegeben.
  */
 
-BOOLEAN U1_KPKonstruiert(RegelOderGleichungsT Vater, unsigned int Stellennummer, 
+BOOLEAN U1_KPKonstruiert(RegelOderGleichungsT Vater, unsigned int Stellennummer,
 			 RegelOderGleichungsT Mutter, TermT *Links, TermT *Rechts)
 {
   UTermT Stelle = TO_TermAnStelle(TP_LinkeSeite(Vater),Stellennummer);
