@@ -33,8 +33,8 @@
 #define BOB_NFCallback(x,y,z) /* nix tun */
 #endif
 
-typedef unsigned short StellenT;
-#define MaxStelle USHRT_MAX
+typedef unsigned int StellenT;
+#define MaxStelle UINT_MAX
 
 #define VERBOSE 1
 extern BOOLEAN drucken;
