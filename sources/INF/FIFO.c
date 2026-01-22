@@ -1,7 +1,7 @@
 /* **************************************************************************
  * FIFO.c
  *
- * Ein Zapfhahn zum aufzählen aller CPs und IRs in FIFO Reihenfolge.
+ * Ein Zapfhahn zum aufzï¿½hlen aller CPs und IRs in FIFO Reihenfolge.
  * 
  * Jean-Marie Gaillourdet, 18.09.2003
  *
@@ -22,12 +22,12 @@
 #include "DSBaumOperationen.h"
 #include "Zielverwaltung.h"
 
-/* TachoS speichert immer die letzte zurückgelieferte Regel/Gleichung */
+/* TachoS speichert immer die letzte zurï¿½ckgelieferte Regel/Gleichung */
 /* struct TachoS { */
 /*   / * Tacho verwaltet TRUE => kritische Paare, FALSE => kritische Ziele * / */
 /*   BOOLEAN modusCP;   */
  
-/*   / * für i = 0 bezeichnet j das aktuelle Axiom * / */
+/*   / * fï¿½r i = 0 bezeichnet j das aktuelle Axiom * / */
 /*   AbstractTime i;  */
 /*   AbstractTime j; */
 /*   Position xp;  */
@@ -149,8 +149,8 @@ static BOOLEAN fifo_incrementJ( TachoT tacho )
   }
 }
 
-/* Teste ob die xbits ein gültiges KP beschreiben können 
-   mögliche Fehler: Überlappung mit Ungleichung
+/* Teste ob die xbits ein gï¿½ltiges KP beschreiben kï¿½nnen 
+   mï¿½gliche Fehler: ï¿½berlappung mit Ungleichung
                     Drehen einer gerichteten Gleichung
 */
 static BOOLEAN fifo_invalidXbits( TachoT tacho ) {
@@ -159,8 +159,8 @@ static BOOLEAN fifo_invalidXbits( TachoT tacho ) {
   tp_i = RE_getActiveWithBirthday(tacho->i);
   tp_j = RE_getActiveWithBirthday(tacho->j);
 
-  return  ((!POS_into_i(tacho->xp)) && RE_IstUngleichung(tp_i)) /* Überlappung in negatives i */ 
-    || (( POS_into_i(tacho->xp)) && RE_IstUngleichung(tp_j))    /* Überlappung in negatives j */
+  return  ((!POS_into_i(tacho->xp)) && RE_IstUngleichung(tp_i)) /* ï¿½berlappung in negatives i */ 
+    || (( POS_into_i(tacho->xp)) && RE_IstUngleichung(tp_j))    /* ï¿½berlappung in negatives j */
     || ( TP_IstMonogleichung( tp_j ) && POS_j_right(tacho->xp))
     || ( TP_IstMonogleichung( tp_i ) && POS_i_right(tacho->xp))
     || ( TP_TermpaarIstRegel(tp_j) && POS_j_right(tacho->xp)) /* Regel j darf nicht gedreht werden */
@@ -170,12 +170,12 @@ static BOOLEAN fifo_invalidXbits( TachoT tacho ) {
 
 static BOOLEAN fifo_incrementPos( TachoT tacho )
 {
-  if (tacho->j == ((unsigned) -1)) {
-    /* in diesem Zustand gibt es keine Positionen zu erhöhen */
+  if (tacho->j == ((unsigned long) -1)) {
+    /* in diesem Zustand gibt es keine Positionen zu erhï¿½hen */
     return FALSE;
   }
 
-  if (tacho->pos_max == ((unsigned int)-1)) {
+  if (tacho->pos_max == ((unsigned long)-1)) {
     fifo_calcMaxPos(tacho);
   }
 
@@ -184,7 +184,7 @@ static BOOLEAN fifo_incrementPos( TachoT tacho )
 
     do {
       if (POS_xbits(tacho->xp) >= 7) {
-	/* die Position ist nicht mehr weiter zu erhöhen */
+	/* die Position ist nicht mehr weiter zu erhï¿½hen */
 	return FALSE;
       }
       POS_set_xbits(tacho->xp,POS_xbits(tacho->xp)+1);
@@ -306,7 +306,7 @@ static BOOLEAN fifo_selectNextAxiom( TachoT tacho, SelectRecT* next )
   tacho->j++;
 
   if (tacho->i != 0) {
-    /* für neue Axiome zurückspringen */
+    /* fï¿½r neue Axiome zurï¿½ckspringen */
     if (tacho->anzahlBekannterAxiome < AX_AnzahlAxiome()) {
       WId wid = {0,{0,0,tacho->j}};
       tacho->anzahlBekannterAxiome++;
@@ -389,7 +389,7 @@ static BOOLEAN fifo_Selektiere( ZapfhahnT z, SelectRecT* next )
   tacho->new_initialized = FALSE;
 
   /* wiederhole bis wir eine Gleichung haben, die noch nicht selektiert wurde
-     oder der der Tacho nicht mehr weiter hochgezählt werden kann */
+     oder der der Tacho nicht mehr weiter hochgezï¿½hlt werden kann */
   do {
     if (tacho->i == 0 || tacho->anzahlBekannterAxiome != AX_AnzahlAxiome()) {
       result = fifo_selectNextAxiom( tacho, next );
@@ -425,8 +425,8 @@ static BOOLEAN fifo_BereitsSelektiertWId( ZapfhahnT z, WId* wid )
   if (tacho->blockAlreadySelected) return FALSE;
 
   if (tacho->new_initialized) {
-    /* ansonsten würde bei einem Aufruf von alreadySelected vor dem
-       ersten selectNextElement immer true zurückgegeben werden 
+    /* ansonsten wï¿½rde bei einem Aufruf von alreadySelected vor dem
+       ersten selectNextElement immer true zurï¿½ckgegeben werden 
     */
     return FALSE;
   } else { 
