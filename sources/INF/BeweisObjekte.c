@@ -1,0 +1,833 @@
+#if 0
+
+fuer Operatoren ggf. Quotierung noetig
+exakt wie in Prolog
+Achtung: in Ausgaben.c Variablen umgestellt auf X1, X2, ...
+bei Lemmata und Finalfakten keine Ausgabe im TPTP-Modus,
+  da Zweck nicht gesehen
+
+ACHTUNG #START / #END zurueck
+
+#endif
+
+#define TPTP 1
+
+
+#include "compiler-extra.h"
+#include "general.h"
+#include "Ausgaben.h"
+#include "Axiome.h"
+#include "BeweisObjekte.h"
+#include "DSBaumOperationen.h"
+#include "Hauptkomponenten.h"
+#include "KPVerwaltung.h"
+#include "NFBildung.h"
+#include "Parameter.h"
+#include "RUndEVerwaltung.h"
+#include "TermOperationen.h"
+#include "Unifikation1.h"
+#include "Zielverwaltung.h"
+
+#include <stdio.h>
+
+#define DO_BOB 1
+
+static FILE *bob_out;
+static BOOLEAN bob_print;
+static unsigned long bob_id1;
+static unsigned long bob_id2;
+static unsigned long bob_id3;
+static unsigned long bob_id4;
+static TermT bob_lhs;
+static TermT bob_rhs;
+BOOLEAN Bob_do_callback = FALSE;
+static char * bob_type;
+AbstractTime bob_memo;
+
+static void bob_redstep(TermT lhs, TermT rhs, char* type, 
+                        SeitenT seite, TermT StelleTop, UTermT StelleP, 
+                        RegelOderGleichungsT angewendetesObjekt, 
+                        SeitenT reseite)
+{
+  unsigned int id4 = !TP_FreieVariablen(angewendetesObjekt) ? 0 
+                       : TP_RichtungAusgezeichnet(angewendetesObjekt) ? 1 : 2;
+  if (bob_print){
+#if 0
+1.0.0.1 : tes-goal : add(negate(add(a,negate(b))),negate(add(negate(b),negate(a)))) = b : tes-red(1.0.0.0,L.2.1,0.3.2.0,L)
+cnf(1.0.0.1,plain,
+    ( add(negate(add(a,negate(b))),negate(add(negate(b),negate(a)))) = b ),
+    inference(reduction,[status(thm)],['1.0.0.0','0.3.2.0',theory(equality)]),
+    [pos('L.2.1','L')]).
+#endif
+#if TPTP
+    IO_DruckeFlexStrom(bob_out, 
+                       "cnf('%u.%u.%u.%u',plain,\n"
+                       "    ( %T = %T ),\n"
+                       "    inference(reduction,[status(thm)],['%u.%u.%u.%u','%u.%u.%u.%u',theory(equality)]),\n"
+                       "    [pos('%p','%q')]).\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4+1,
+                       lhs, rhs,
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       0, TP_getGeburtsTag_M(angewendetesObjekt), 2, id4,
+                       seite, StelleTop, StelleP,
+                       reseite);  }
+#else
+    IO_DruckeFlexStrom(bob_out, 
+                       "%u.%u.%u.%u : %s : %T = %T : "
+                       "tes-red(%u.%u.%u.%u,%p,%u.%u.%u.%u,%q)\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4+1, 
+                       type,
+                       lhs, rhs,
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       seite, StelleTop, StelleP,
+                       0, TP_getGeburtsTag_M(angewendetesObjekt), 2, id4,
+                       reseite);  }
+#endif
+  bob_id4++;
+  if (TP_RichtungAusgezeichnet(angewendetesObjekt)){
+    angewendetesObjekt->used = TRUE;
+  }
+  else {
+    TP_Gegenrichtung(angewendetesObjekt)->used = TRUE;
+  }
+}
+
+void Bob_NFCallback(TermT ergebnis, UTermT betroffenerTeilterm, 
+                    RegelOderGleichungsT angewendetesObjekt)
+{
+  bob_redstep(bob_lhs, bob_rhs, bob_type,
+              (ergebnis == bob_lhs) ? linkeSeite : rechteSeite, ergebnis, 
+              betroffenerTeilterm, angewendetesObjekt,
+              TP_RichtungAusgezeichnet(angewendetesObjekt) 
+              ? linkeSeite : rechteSeite);
+}
+
+static void bob_PrepareNF(AbstractTime time, char *type)
+{
+  bob_memo = HK_getAbsTime_M();
+  bob_type = type;
+  HK_AbsTime = time;
+  Bob_do_callback = TRUE;
+}
+
+static void bob_normalize(BOOLEAN doR, BOOLEAN doE, char *type, 
+                          AbstractTime time)
+{
+  bob_PrepareNF(time, type);
+  NF_Normalform2(doR, doE, bob_lhs, bob_rhs);
+  BOB_ClearNF();
+}
+
+static void bob_reconstructCP(WId wid)
+{
+  /* folgender Code sollte als Service von KPV angeboten werden: */
+  RegelOderGleichungsT actualParent = RE_getActiveWithBirthday(WID_i(wid));
+  RegelOderGleichungsT otherParent  = RE_getActiveWithBirthday(WID_j(wid));
+  actualParent->used = TRUE;
+  otherParent->used = TRUE;
+
+  if (POS_i_right(WID_xp(wid)) && TP_IstMonogleichung(actualParent)) {
+    our_error("think twice! 2");
+  }
+  if (POS_j_right(WID_xp(wid)) && TP_IstMonogleichung(otherParent)) {
+    our_error("think thrice! 2");
+  }
+
+  if (POS_i_right(WID_xp(wid)) && !TP_IstMonogleichung(actualParent)) {
+      actualParent = TP_Gegenrichtung(actualParent);
+  }
+  if (POS_j_right(WID_xp(wid)) && !TP_IstMonogleichung(otherParent)) {
+      otherParent = TP_Gegenrichtung(otherParent);
+  }
+
+  if (!POS_into_i(WID_xp(wid))) {
+    RegelOderGleichungsT tmp = actualParent;
+    actualParent = otherParent;
+    otherParent = tmp;
+  }
+  U1_KPRekonstruieren(actualParent, POS_pos(WID_xp(wid)), 
+                      otherParent, &bob_lhs, &bob_rhs);
+  BO_TermpaarNormierenAlsKP(bob_lhs,bob_rhs);
+  /* Ende Service-Code */
+  bob_id3 = 0;
+  bob_id4 = 0;
+  if (bob_print){
+#if 0
+0.5.0.0 : tes-eqn : add(negate(add(X1,X2)),negate(add(X1,negate(X2)))) = negate(X1) : cp(0.2.2.0,L.1,0.1.2.0,L)
+cnf(0.5.0.0,plain,
+    ( add(negate(add(X1,X2)),negate(add(X1,negate(X2)))) = negate(X1) ),
+    inference(cp,[status(thm)],['0.2.2.0','0.1.2.0',theory(equality)]),
+    [pos('L.1','L')]).
+#endif
+#if TPTP
+    IO_DruckeFlexStrom(bob_out, 
+                       "cnf('%u.%u.%u.%u',plain,\n"
+                       "    ( %T = %T ),\n"
+                       "    inference(cp,[status(thm)],['%u.%u.%u.%u','%u.%u.%u.%u',theory(equality)]),\n"
+                       "    [pos('%p','%q')]).\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_lhs, bob_rhs,
+                       0, TP_getGeburtsTag_M(actualParent), 2, 0,
+                       0, TP_getGeburtsTag_M(otherParent), 2, 0,
+                       TP_RichtungAusgezeichnet(actualParent) ? linkeSeite : rechteSeite,
+                       TP_LinkeSeite(actualParent), 
+                       TO_TermAnStelle(TP_LinkeSeite(actualParent),
+                                       POS_pos(WID_xp(wid))),
+                       TP_RichtungAusgezeichnet(otherParent) ? linkeSeite : rechteSeite);
+#else
+    IO_DruckeFlexStrom(bob_out, 
+                       "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                       "cp(%u.%u.%u.%u,%p,%u.%u.%u.%u,%q)\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_lhs, bob_rhs,
+                       0, TP_getGeburtsTag_M(actualParent), 2, 0,
+                       TP_RichtungAusgezeichnet(actualParent) 
+                       ? linkeSeite : rechteSeite,
+                       TP_LinkeSeite(actualParent), 
+                       TO_TermAnStelle(TP_LinkeSeite(actualParent),
+                                       POS_pos(WID_xp(wid))),
+                       0, TP_getGeburtsTag_M(otherParent), 2, 0,
+                       TP_RichtungAusgezeichnet(otherParent) 
+                       ? linkeSeite : rechteSeite);
+#endif
+  }
+  bob_normalize(PA_GenR(), PA_GenE(), "tes-eqn", WID_i(wid));
+}
+
+static void bob_reconstructACGOverlap(WId wid)
+{
+  SelectRecT selRec;
+  RegelOderGleichungsT actualParent;
+  RegelOderGleichungsT otherParent;
+
+  KPV_reconstruct(&wid,&selRec,FALSE);
+  if (1){
+    bob_lhs = selRec.lhs;
+    bob_rhs = selRec.rhs;
+  }
+  else {
+    bob_lhs = selRec.rhs;
+    bob_rhs = selRec.lhs;
+  }
+  actualParent = selRec.actualParent;
+  otherParent = selRec.otherParent;
+
+  actualParent->used = TRUE;
+  otherParent->used = TRUE;
+  BO_TermpaarNormierenAlsKP(bob_lhs,bob_rhs);
+  bob_id3 = 0;
+  bob_id4 = 0;
+  if (bob_print){
+#if TPTP
+    IO_DruckeFlexStrom(bob_out, 
+                       "cnf('%u.%u.%u.%u',plain,\n"
+                       "    ( %T = %T ),\n"
+                       "    inference(cp,[status(thm)],['%u.%u.%u.%u','%u.%u.%u.%u',theory(equality)]),\n"
+                       "    [pos('%p','%q')]).\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_lhs, bob_rhs,
+                       0, TP_getGeburtsTag_M(actualParent), 2, 0,
+                       0, TP_getGeburtsTag_M(otherParent), 2, 0,
+                       TP_RichtungAusgezeichnet(actualParent) ? linkeSeite : rechteSeite,
+                       TP_LinkeSeite(actualParent), 
+                       TO_TermAnStelle(TP_LinkeSeite(actualParent),
+                                       POS_pos(WID_xp(wid))),
+                       TP_RichtungAusgezeichnet(otherParent) ? linkeSeite : rechteSeite);
+#else
+    IO_DruckeFlexStrom(bob_out, 
+                       "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                       "cp(%u.%u.%u.%u,%p,%u.%u.%u.%u,%q) # ACG %s\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_lhs, bob_rhs,
+                       0, TP_getGeburtsTag_M(actualParent), 2, 0,
+                       TP_RichtungAusgezeichnet(actualParent) 
+                       ? linkeSeite : rechteSeite,
+                       TP_LinkeSeite(actualParent), 
+                       TO_TermAnStelle(TP_LinkeSeite(actualParent),
+                                       POS_pos(WID_xp(wid))),
+                       0, TP_getGeburtsTag_M(otherParent), 2, 0,
+                       TP_RichtungAusgezeichnet(otherParent) 
+                       ? linkeSeite : rechteSeite,
+                       (RE_IstRegel(actualParent) && POS_i_right(WID_xp(wid))) ? "RRECHTS" : "");
+#endif
+  }
+  bob_normalize(PA_GenR(), PA_GenE(), "tes-eqn", WID_i(wid));
+}
+
+static void bob_reconstructIR(WId wid)
+#if 0
+0.27.0.0 : tes-eqn : +(X1,*(X1,X2)) = *(X1,+(1,X2)) : 0.16.2.0 ###IR
+cnf('0.27.0.0',plain,
+    ( +(X1,*(X1,X2)) = *(X1,+(1,X2)) ),
+    inference(interreduction_right,[status(thm)],['0.16.2.0'])).
+#endif
+{
+  RegelOderGleichungsT re = RE_getActiveWithBirthday(WID_i(wid));
+  re->used = TRUE;
+  bob_lhs = TO_Termkopie(TP_LinkeSeite(re));
+  bob_rhs = TO_Termkopie(TP_RechteSeite(re));
+  bob_id3 = 0;
+  bob_id4 = 0;
+  if (bob_print){
+#if TPTP
+    IO_DruckeFlexStrom(bob_out, 
+                       "cnf('%u.%u.%u.%u',plain,\n"
+                       "    ( %T = %T ),\n"
+                       "    inference(interreduction_right,[status(thm)],['%u.%u.%u.%u'])).\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_lhs, bob_rhs,
+                       0, WID_i(wid), 2, 0);
+#else
+    IO_DruckeFlexStrom(bob_out, 
+                       "%u.%u.%u.%u : tes-eqn : %T = %T : %u.%u.%u.%u ###IR\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_lhs, bob_rhs,
+                       0, WID_i(wid), 2, 0);
+#endif
+  }
+  bob_normalize(PA_GenR(), PA_GenE(), "tes-eqn", WID_j(wid));
+}
+
+static void bob_reconstructAxiom(WId wid)
+#if 0
+0.1.0.0 : tes-eqn : x1 = negate(add(negate(add(x1,x2)),negate(add(x1,negate(x2))))) : initial
+cnf(3,axiom,
+    ( negate(add(negate(add(X1,X2)),negate(add(X1,negate(X2))))) = X1 ),
+    file('/home/graph/tptp/TPTP/Axioms/ROB001-0.ax',robbins_axiom)).
+#endif
+{
+  AX_AxiomKopieren(POS_pos(WID_xp(wid)), &bob_lhs, &bob_rhs);
+  bob_id3 = 0;
+  bob_id4 = 0;
+  if (bob_print){
+#if TPTP
+    IO_DruckeFlexStrom(bob_out, "cnf('%u.%u.%u.%u',axiom,\n"
+                       "    ( %T = %T ),\n"
+                       "    file('%s')).\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_lhs, bob_rhs, IO_Spezifikationsname());
+#else
+    IO_DruckeFlexStrom(bob_out, "%u.%u.%u.%u : tes-eqn : %T = %T : initial\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_lhs, bob_rhs);
+#endif
+  }
+}
+
+static void bob_reconstruct(RegelOderGleichungsT faktum)
+{
+  WId wid = faktum->wid;
+  if (WID_isCP(wid)) {
+    bob_reconstructCP(wid);
+  } 
+  else if (WID_isACGOverlap(wid)) {
+    bob_reconstructACGOverlap(wid);
+  } 
+  else if (WID_isIR(wid)) {
+    bob_reconstructIR(wid);
+  } 
+  else if (WID_isAxiom(wid)) {
+    bob_reconstructAxiom(wid);
+  } 
+  else {
+    our_error("VOV: reconstruct(): falsches Element zu rekonstruieren");
+  }
+}
+
+static void bob_select(RegelOderGleichungsT faktum)
+{
+#if 0
+0.1.1.0 : tes-eqn : x1 = negate(add(negate(add(X1,X2)),negate(add(X1,negate(X2))))) : 0.1.0.0 ###W <0,0,0,[0,0,0,1]>
+cnf(0.1.1.0,plain,
+    ( X1 = negate(add(negate(add(X1,X2)),negate(add(X1,negate(X2))))) ),
+    inference(weigh,[status(thm)],['0.1.0.0']),
+    [weight('<0,0,0,[0,0,0,1]>')]).
+#endif
+
+  if (bob_print){
+#if TPTP
+    IO_DruckeFlexStrom(bob_out, 
+                       "cnf('%u.%u.%u.%u',plain,\n"
+                       "    ( %T = %T ),\n"
+                       "    inference(weigh,[status(thm)],['%u.%u.%u.%u']),\n"
+                       "    [weight('%w')]).\n",
+                       bob_id1, bob_id2, 1, 0,
+                       bob_lhs, bob_rhs,
+                       bob_id1, bob_id2, bob_id3, bob_id4, 
+                       &(faktum->wid));
+#else
+    IO_DruckeFlexStrom(bob_out, 
+                       "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                       "%u.%u.%u.%u ###W %w\n",
+                       bob_id1, bob_id2, 1, 0,
+                       bob_lhs, bob_rhs,
+                       bob_id1, bob_id2, bob_id3, bob_id4, 
+                       &(faktum->wid));
+#endif
+  }
+  bob_id3 = 1;
+  bob_id4 = 0;
+  if (TP_getGeburtsTag_M(faktum) > 1){
+    bob_normalize(PA_SelR(), PA_SelE(), "tes-eqn", 
+                  TP_getGeburtsTag_M(faktum)-1);
+  }
+}
+
+static char *bob_dreh_bestimmen(RegelOderGleichungsT faktum)
+{
+  BO_TermpaarNormierenAlsKP(bob_lhs,bob_rhs);
+  if (TO_TermeGleich(bob_lhs,TP_LinkeSeite(faktum)) && 
+      TO_TermeGleich(bob_rhs,TP_RechteSeite(faktum))){
+    return "u";
+  }
+  BO_TermpaarNormierenAlsKP(bob_rhs,bob_lhs);
+  if (TO_TermeGleich(bob_rhs,TP_LinkeSeite(faktum)) && 
+      TO_TermeGleich(bob_lhs,TP_RechteSeite(faktum))){
+    return "x";
+  }
+  IO_DruckeFlex( "### BOB: %t = %t\n %t = %t\n ", TP_LinkeSeite(faktum), TP_RechteSeite(faktum),
+		 bob_lhs,bob_rhs);
+  
+  our_error("BOB: cannot reconstruct active fact");
+  return NULL; /* shut up compiler */
+}
+
+static void bob_activate(RegelOderGleichungsT faktum)
+{
+  RegelOderGleichungsT gegenrichtung;
+  if (RE_IstRegel(faktum)){
+    if (bob_print){
+#if 0
+0.1.2.0 : tes-rule : negate(add(negate(add(X1,X2)),negate(add(X1,negate(X2))))) -> X1 : orient(0.1.1.0,x) ###R 1
+cnf(0.1.2.0,plain,
+    ( negate(add(negate(add(X1,X2)),negate(add(X1,negate(X2))))) = X1 ),
+    inference(orient,[status(thm)],['0.1.1.0']),
+    [x,rule_1]).
+#endif
+#if TPTP
+      IO_DruckeFlexStrom(bob_out, 
+                         "cnf('%u.%u.%u.%u',plain,\n"
+                         "    ( %T = %T ),\n"
+                         "    inference(orient,[status(thm)],['%u.%u.%u.%u',theory(equality)]),\n"
+                         "    [%s,rule_%l]).\n",
+                         bob_id1, bob_id2, 2, 0,
+                         TP_LinkeSeite(faktum), TP_RechteSeite(faktum),
+                         bob_id1, bob_id2, bob_id3, bob_id4, 
+                         bob_dreh_bestimmen(faktum),
+                         RE_AbsNr(faktum));
+#else
+      IO_DruckeFlexStrom(bob_out, 
+                         "%u.%u.%u.%u : tes-rule : %T -> %T : "
+                         "orient(%u.%u.%u.%u,%s) ###R %l\n",
+                         bob_id1, bob_id2, 2, 0,
+                         TP_LinkeSeite(faktum), TP_RechteSeite(faktum),
+                         bob_id1, bob_id2, bob_id3, bob_id4, 
+                         bob_dreh_bestimmen(faktum),
+                         RE_AbsNr(faktum));
+#endif
+    }
+  }
+  else {
+    if (bob_print){
+#if 0
+0.3.2.0 : tes-eqn : add(X1,X2) = add(X2,X1) : 0.3.1.0 ###E 1
+cnf(0.3.2.0,plain,
+    ( add(X1,X2) = add(X2,X1) ),
+    inference(activate,[status(thm)],['0.3.1.0']),
+    [equation_1]).
+#endif
+#if TPTP
+      IO_DruckeFlexStrom(bob_out, 
+                         "cnf('%u.%u.%u.%u',plain,\n"
+                         "    ( %T = %T ),\n"
+                         "    inference(activate,[status(thm)],['%u.%u.%u.%u']),\n"
+                         "    [equation_%l]).\n",
+                         bob_id1, bob_id2, 2, 0,
+                         TP_LinkeSeite(faktum), TP_RechteSeite(faktum),
+                         bob_id1, bob_id2, bob_id3, bob_id4, 
+                         RE_AbsNr(faktum));
+#else
+      IO_DruckeFlexStrom(bob_out, 
+                         "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                         "%u.%u.%u.%u ###E %l\n",
+                         bob_id1, bob_id2, 2, 0,
+                         TP_LinkeSeite(faktum), TP_RechteSeite(faktum),
+                         bob_id1, bob_id2, bob_id3, bob_id4, 
+                         RE_AbsNr(faktum));
+#endif
+    }
+#if 0
+0.1.2.1 : tes-eqn : f(X1) = g(b) : 0.1.2.0 ###FVI R
+cnf(0.1.2.1,plain,
+    ( f(X1) = g(b) ),
+    inference(instr,[status(thm)],['0.1.2.0',theory(equality)])).
+#endif
+    if (TP_FreieVariablen(faktum)){
+      if (bob_print){
+#if TPTP
+        IO_DruckeFlexStrom(bob_out, 
+                           "cnf('%u.%u.%u.%u',plain,\n"
+                           "    ( %T = %T ),\n"
+                           "    inference(instr,[status(thm)],['%u.%u.%u.%u',theory(equality)])).\n",
+                           bob_id1, bob_id2, 2, 1,
+                           TP_LinkeSeite(faktum), TP_RechteSeiteUnfrei(faktum),
+                           bob_id1, bob_id2, 2, 0);
+#else
+        IO_DruckeFlexStrom(bob_out, 
+                           "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                           "%u.%u.%u.%u ###FVI R\n",
+                           bob_id1, bob_id2, 2, 1,
+                           TP_LinkeSeite(faktum), TP_RechteSeiteUnfrei(faktum),
+                           bob_id1, bob_id2, 2, 0);
+#endif
+      }
+    }
+    gegenrichtung = TP_Gegenrichtung(faktum);
+    if ((gegenrichtung != NULL) && TP_FreieVariablen(gegenrichtung)){
+      if (bob_print){
+#if 0
+0.1.2.2 : tes-eqn : f(b) = g(X1) : 0.1.2.0 ###FVI L
+cnf(0.1.2.2,plain,
+    ( f(b) = g(X1) ),
+    inference(instl,[status(thm)],['0.1.2.0',theory(equality)])).
+#endif
+#if TPTP
+        IO_DruckeFlexStrom(bob_out, 
+                           "cnf('%u.%u.%u.%u',plain,\n"
+                           "    ( %T = %T ),\n"
+                           "    inference(instl,[status(thm)],['%u.%u.%u.%u',theory(equality)])).\n",
+                           bob_id1, bob_id2, 2, 2,
+                           TP_RechteSeiteUnfrei(gegenrichtung), 
+                           TP_LinkeSeite(gegenrichtung), 
+                           bob_id1, bob_id2, 2, 0);
+#else
+        IO_DruckeFlexStrom(bob_out, 
+                           "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                           "%u.%u.%u.%u ###FVI L\n",
+                           bob_id1, bob_id2, 2, 2,
+                           TP_RechteSeiteUnfrei(gegenrichtung), 
+                           TP_LinkeSeite(gegenrichtung), 
+                           bob_id1, bob_id2, 2, 0);
+#endif
+      }
+    }
+  }
+}
+
+static void bob_lemma(RegelOderGleichungsT faktum MAYBE_UNUSEDPARAM)
+{
+#if TPTP
+  ; /* Ausgabe im TPTP-Modus erscheint nutzlos, da Inferenztyp unklar */
+#else
+  /* vorlaeufiger fast Murks */
+  RegelOderGleichungsT gegenrichtung;
+  if (RE_IstRegel(faktum)){
+    if (bob_print){
+      IO_DruckeFlexStrom(bob_out, 
+                         "%u.%u.%u.%u : tes-rule : %T -> %T : "
+                         "initial ###R %l (Lemma)\n",
+                         bob_id1, bob_id2, 2, 0,
+                         TP_LinkeSeite(faktum), TP_RechteSeite(faktum),
+                         RE_AbsNr(faktum));
+    }
+  }
+  else {
+    if (bob_print){
+      IO_DruckeFlexStrom(bob_out, 
+                         "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                         "initial ###E %l (Lemma)\n",
+                         bob_id1, bob_id2, 2, 0,
+                         TP_LinkeSeite(faktum), TP_RechteSeite(faktum),
+                         RE_AbsNr(faktum));
+    }
+    if (TP_FreieVariablen(faktum)){
+      if (bob_print){
+        IO_DruckeFlexStrom(bob_out, 
+                           "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                           "%u.%u.%u.%u ###FVI R\n",
+                           bob_id1, bob_id2, 2, 1,
+                           TP_LinkeSeite(faktum), TP_RechteSeiteUnfrei(faktum),
+                           bob_id1, bob_id2, 2, 0);
+      }
+    }
+    gegenrichtung = TP_Gegenrichtung(faktum);
+    if ((gegenrichtung != NULL) && TP_FreieVariablen(gegenrichtung)){
+      if (bob_print){
+        IO_DruckeFlexStrom(bob_out, 
+                           "%u.%u.%u.%u : tes-eqn : %T = %T : "
+                           "%u.%u.%u.%u ###FVI L\n",
+                           bob_id1, bob_id2, 2, 2,
+                           TP_RechteSeiteUnfrei(gegenrichtung), 
+                           TP_LinkeSeite(gegenrichtung), 
+                           bob_id1, bob_id2, 2, 0);
+      }
+    }
+  }
+#endif
+}
+
+static void bob_BeweisFuerAktivum(RegelOderGleichungsT faktum)
+{
+  if (!TP_RichtungAusgezeichnet(faktum)){ /* should not occur! */
+    faktum = TP_Gegenrichtung(faktum);
+  }
+  bob_id1 = 0;
+  bob_id2 = TP_getGeburtsTag_M(faktum);
+
+  if (WID_isLemma(faktum->wid)){
+    bob_lemma(faktum);
+  }
+  else {
+    bob_reconstruct(faktum);
+    bob_select(faktum);
+    bob_activate(faktum);
+
+    TO_TermeLoeschen(bob_lhs, bob_rhs);
+    bob_lhs = NULL;
+    bob_rhs = NULL;
+  }
+  if (bob_print){
+    faktum->proofPrinted = TRUE;
+  }
+}
+
+void BOB_BeweisFuerNormalesZiel(TermT lhs, TermT rhs, unsigned long nummer, 
+                                unsigned int notimes, AbstractTime *times)
+{
+  unsigned int i;
+  bob_lhs = TO_Termkopie(lhs);
+  bob_rhs = TO_Termkopie(rhs);
+  BOB_UrspruenglichesZiel(bob_lhs, bob_rhs, nummer);
+  for (i = 0; i < notimes; i++){
+    bob_normalize(TRUE, TRUE, "tes-goal", times[i]);
+  }
+  BOB_ZielBewiesen(bob_lhs, bob_rhs);
+  TO_TermeLoeschen(bob_lhs, bob_rhs);
+  bob_lhs = NULL;
+  bob_rhs = NULL;
+}
+
+void BOB_UrspruenglichesZiel(TermT lhs, TermT rhs, unsigned long nummer)
+{
+  bob_id1 = nummer;
+  bob_id2 = 0;
+  bob_id3 = 0;
+  bob_id4 = 0;
+
+  if (bob_print){
+#if 0
+1.0.0.0 : tes-goal : add(negate(add(a,negate(b))),negate(add(negate(a),negate(b)))) = b : hypothesis
+cnf('1.0.0.0',negated_conjecture,
+    ( add(negate(add(a,negate(b))),negate(add(negate(b),negate(a)))) != b ),
+    file('/home/graph/tptp/TPTP/Problems/ROB/ROB002-1.p',conjecture_1)).
+#endif
+#if TPTP
+    IO_DruckeFlexStrom(bob_out, "cnf('%u.%u.%u.%u',conjecture,\n"
+                       "    ( %T = %T ),\n"
+                       "    file('%s',conjecture_%l)).\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       lhs, rhs, IO_Spezifikationsname(),bob_id1);
+#else
+    IO_DruckeFlexStrom(bob_out, 
+                       "%u.%u.%u.%u : tes-goal : %T = %T : hypothesis\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       lhs, rhs);
+#endif
+  }
+}
+
+void BOB_ZielBewiesen(TermT lhs, TermT rhs)
+{
+  if (bob_print){
+#if 0
+1.0.0.4 : tes-final : b = b : 1.0.0.3
+cnf('1.0.0.4',plain,
+    ( $true ),
+    inference(trivial,[status(thm)],['1.0.0.3',theory(equality)]),
+    [conjecture_1]).
+#endif
+#if TPTP
+    IO_DruckeFlexStrom(bob_out, 
+                       "cnf('%u.%u.%u.%u',plain,\n"
+                       "    ( $true ),\n"
+                       "    inference(trivial,[status(thm)],['%u.%u.%u.%u',theory(equality)]),\n"
+                       "    [conjecture_%l]).\n",
+                       bob_id1, bob_id2, bob_id3, bob_id4+1,
+                       bob_id1, bob_id2, bob_id3, bob_id4,
+                       bob_id1);
+#else
+    IO_DruckeFlexStrom(bob_out, 
+                       "%u.%u.%u.%u : tes-final : %T = %T : %u.%u.%u.%u\n", 
+                       bob_id1, bob_id2, bob_id3, bob_id4+1,
+                       lhs, rhs,
+                       bob_id1, bob_id2, bob_id3, bob_id4);
+#endif
+  }
+}
+
+void BOB_PrepareNF(TermT lhs, TermT rhs, AbstractTime time)
+{
+  bob_lhs = lhs;
+  bob_rhs = rhs;
+  bob_PrepareNF(time, "tes-goal");
+}
+
+void BOB_ClearNF(void)
+{
+  HK_AbsTime = bob_memo;
+  Bob_do_callback = FALSE;
+  bob_type = NULL;  
+}
+
+void BOB_RedStep(TermT term, TermT andererTerm, 
+                 RegelOderGleichungsT objekt, SeitenT seite, 
+                 UTermT Stelle, SeitenT reseite)
+{
+  if (seite == linkeSeite){
+    bob_redstep(term,andererTerm,"tes-goal",seite,term,Stelle,objekt,reseite);
+  }
+  else {
+    bob_redstep(andererTerm,term,"tes-goal",seite,term,Stelle,objekt,reseite);
+  }
+}
+
+void bob_handleAktivum(RegelOderGleichungsT faktum)
+{
+  if ((faktum->used) || 
+       ((TP_Gegenrichtung(faktum) != NULL) &&
+        (TP_Gegenrichtung(faktum)->used))){
+    if (!(faktum->proofPrinted)){
+      bob_BeweisFuerAktivum(faktum);
+    }
+  }
+}
+
+void BOB_BeweiseFuerAktiva(void)
+{
+  /* Achtung: Probleme bei unsigned und firstIndex == 0 ! */
+  long firstIndex = RE_ActiveFirstIndex(); 
+  long lastIndex  = RE_ActiveLastIndex();
+  long i;
+  if (bob_print){ /* drucken erfolgt vorwaerts */
+    for (i = firstIndex; i <= lastIndex; i++){ 
+      bob_handleAktivum(RE_getActive(i));
+    }
+  }
+  else { /* scannen erfolgt rueckwaerts */
+    for (i = lastIndex; i >= firstIndex; i--){ 
+      bob_handleAktivum(RE_getActive(i));
+    }
+  }
+}
+
+void BOB_SetScanMode(void)
+{
+  bob_print = FALSE;
+}
+
+void BOB_SetPrintMode(void)
+{
+  bob_print = TRUE;
+fprintf(bob_out,"#START OF PROOF\n");
+}
+
+void BOB_InitAposteriori(void)
+{
+  if (!PA_doPCL()){
+    return;
+  }
+  if ((PA_pclFileName() != NULL) &&
+      (strcmp(PA_pclFileName(),"-") != 0)){
+    bob_out = fopen(PA_pclFileName(),"w");
+    if (bob_out == NULL){
+      fprintf(stderr, "\n >>> unable to open file %s, "
+              "PCL redirected to <stdout> <<<\n", PA_pclFileName());
+      bob_out = stdout;
+    }
+  }
+  else {
+    bob_out = stdout;
+  }
+}
+
+void BOB_Beenden(void) 
+{
+  if (bob_out != NULL){
+fprintf(bob_out,"#END OF PROOF\n");
+    if (bob_out != stdout){
+      fclose(bob_out);
+    }
+    bob_out = NULL;
+  }
+}
+
+static void bob_EndsystemMarkieren(void)
+{
+  /* Achtung: Probleme bei unsigned und firstIndex == 0 ! */
+  long firstIndex = RE_ActiveFirstIndex(); 
+  long lastIndex  = RE_ActiveLastIndex();
+  long i;
+  for (i = lastIndex; i >= firstIndex; i--){ 
+    RegelOderGleichungsT faktum = RE_getActive(i);
+    if (TP_lebtZumZeitpunkt_M(faktum, HK_getAbsTime_M())) {
+      faktum->used = TRUE;
+    }
+    if (faktum->used){
+      bob_BeweisFuerAktivum(faktum);
+    }
+  }
+}
+
+static void bob_finalFaktum(RegelOderGleichungsT faktum MAYBE_UNUSEDPARAM)
+{
+  if (bob_print){
+#if TPTP
+      /* Ausgabe im TPTP-Modus erscheint nutzlos, da Nummern vage */
+#else
+    IO_DruckeFlexStrom(bob_out, 
+                       "%u.%u.%u.%u : tes-final : %T %s %T : %u.%u.%u.%u\n",
+                       1, TP_getGeburtsTag_M(faktum), 3, 0,
+                       TP_LinkeSeite(faktum), 
+                       RE_IstRegel(faktum) ? "->" : "=",
+                       TP_RechteSeite(faktum),
+                       0, TP_getGeburtsTag_M(faktum), 2, 0);
+#endif
+  }
+}
+
+static void bob_FinalsAusgeben(void)
+{
+  /* Achtung: Probleme bei unsigned und firstIndex == 0 ! */
+  long firstIndex = RE_ActiveFirstIndex(); 
+  long lastIndex  = RE_ActiveLastIndex();
+  long i;
+  for (i = firstIndex; i <= lastIndex; i++){ 
+    RegelOderGleichungsT faktum = RE_getActive(i);
+    if (TP_lebtZumZeitpunkt_M(faktum, HK_getAbsTime_M())) {
+      bob_finalFaktum(faktum);
+    }
+  }
+}
+
+void BOB_DruckeEndsystemFuerBeweisObjekt(void) 
+{
+  if (PA_doPCL()){
+    if (PA_ExtModus() == completion){
+      BOB_SetScanMode();
+      bob_EndsystemMarkieren();
+      BOB_SetPrintMode();
+      BOB_BeweiseFuerAktiva();
+      bob_FinalsAusgeben();
+    }
+  }
+}
+
+void BOB_BeweisFuerAktivum(RegelOderGleichungsT re)
+{
+  if (PA_PCLVerbose()){
+    bob_print = TRUE;
+    re->used = TRUE;
+    bob_handleAktivum(re);
+    bob_finalFaktum(re);
+  }
+}

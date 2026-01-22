@@ -1,0 +1,439 @@
+# -*-Mode: makefile;-*-
+# WICHTIG:
+# fuer omega Sachen die richtige der beiden folgenden Zeilen auskommentieren:
+DO_OMEGA=0
+#DO_OMEGA=1
+#
+# und festlegen, wo sich die omega-lib befindet:
+OMEGA=/home/cschmidt/omega/omega
+#OMEGA=/home/bernd/omega
+
+# master included makefile for Waldmeister
+# geschrieben von Andreas Jaeger <aj@arthur.rhein-neckar.de> 1996,1997
+#
+# Besonderheiten des Makefiles:
+# - bei Benutzung des GCC werden dependency informationen automatisch
+#   geschrieben und sind immer aktuell. Ein make depend ist somit
+#   nicht mehr notwendig und wird deswegen ignoriert.
+#
+OMEGA=/home/bernd/omega
+
+
+SH=/bin/sh
+
+.PHONY: all
+all: binaries
+
+ifeq "$(PRODUCT)" "cce"
+PROGNAME= cce
+else
+PROGNAME= WaldmeisterII
+endif
+
+# SRCDIRS enthaelt die Namen aller Directories, in denen
+# sourcen sind
+SRCDIRS := ANA BASIC CLAS GOALS INF MNF NF ORD PARSE PCL PQ RUN SYS TPR WASIC WDT
+
+# die Namen der Source-Dateien (*.c), die compiliert werden sollen,
+# werden im folgenden definiert:
+ANA_SRC   := Praezedenzgenerator.c XFiles.c YFiles.c PhilMarlow.c
+BASIC_SRC := FehlerBehandlung.c Deque.c Hash.c InfoStrings.c KDHeap.c\
+	     SpeicherVerwaltung.c Stack.c  general.c LispLists.c NKDHeap.c\
+             KissKDHeap.c Trace.c Ring.c 
+ifeq "$(DO_OMEGA)" "1"
+BASIC_SRC += wrapper.cc
+endif
+CLAS_SRC  := SymbolGewichte.c ClasHeuristics.c NewClassification.c \
+	     ClasFunctions.c Clas_CP_Goal.c ClasPatch.c
+GOALS_SRC := MNF_Ziele.c NormaleZiele.c Zielverwaltung.c ZielAusgaben.c
+INF_SRC   := Hauptkomponenten.c Interreduktion.c Konsulat.c Fass.c TankAnlage.c \
+	     MatchOperationen.c RUndEVerwaltung.c BeweisObjekte.c \
+	     Subsumption.c Unifikation1.c \
+	     Unifikation2.c Achtzigstel.c Grundzusammenfuehrung.c \
+             Constraints.c ConfluenceTrees.c ACGrundreduzibilitaet.c \
+	     SuffSolver.c SuffSolver2.c SuffSolver3.c FixpunktACKP.c KBOSuffSolver.c HurdSuffSolver.c PreSolver.c \
+             ConfluenceTrees1.c ConfluenceTrees2.c ConfluenceTrees3.c \
+             ConfluenceTrees4.c ConfluenceTrees5.c ConfluenceTrees6.c ConfluenceTrees7.c \
+             ConfluenceTrees8.c \
+             ConfluenceTrees30.c ConfluenceTrees31.c ConfluenceTrees32.c \
+             ConfluenceTrees40.c ConfluenceTrees41.c ConfluenceTrees42.c \
+             ConfluenceTrees50.c ConfluenceTrees51.c ConfluenceTrees52.c \
+             ConfluenceTrees60.c ConfluenceTrees61.c ConfluenceTrees62.c \
+             ConfluenceTrees70.c ConfluenceTrees71.c ConfluenceTrees72.c \
+             ConfluenceTrees80.c \
+             Dispatcher.c Lemmata.c MissMarple.c \
+             KDHeapElements.c KissKDHeapElements.c\
+             FIFO.c ZapfAnlage.c AxiomZapfhahn.c KPVerwaltung.c Axiome.c
+
+MNF_SRC   := MNF.c MNF_Print.c MNF_PQ.c
+NF_SRC    := NFBildung.c
+ORD_SRC   := KBO.c LPO.c LPOVortests.c Ordnungen.c ZwangsGrund.c \
+             simpleLPO.c simpleLPO1.c \
+             simpleLPO2.c simpleLPO3.c simpleLPO37.c simpleLPO4.c simpleLPO40.c \
+             simpleLPO41.c simpleLPO42.c simpleLPO43.c simpleLPO5.c simpleLPO50.c simpleLPO6.c\
+             simpleLPO7.c simpleLPO8.c simpleLPO9.c simpleLPO10.c simpleLPO11.c \
+             simpleLPO100.c
+RUN_SRC   := Parameter.c Statistiken.c \
+	     parser.c version.c Signale.c WaldmeisterII.c FileMenue.c
+TPR_SRC   := Termpaare.c Stringterms.c
+SYS_SRC	  := ZeitMessung.c DCommunicator.c Communication.c
+WASIC_SRC := Ausgaben.c SymbolOperationen.c Praezedenz.c \
+	     TermOperationen.c TermVerfolgung.c VariablenMengen.c SpezNormierung.c \
+             VariablenDiffMMengen.c
+WDT_SRC   := DSBaumAusgaben.c DSBaumKnoten.c DSBaumTest.c DSBaumOperationen.c
+
+CCE_SRC   := wm-lex.c wm-parse.tab.c cce.c parse-util.c ACGrundreduzibilitaet.c \
+             Ausgaben.c  Constraints.c DSBaumKnoten.c DSBaumOperationen.c FehlerBehandlung.c \
+             Grundzusammenfuehrung.c KBO.c LPO.c LPOVortests.c MatchOperationen.c NFBildung.c \
+             Ordnungen.c RUndEVerwaltung.c SpeicherVerwaltung.c Subsumption.c \
+             SymbolOperationen.c  TermOperationen.c  Termpaare.c VariablenMengen.c general.c \
+             Trace.c ConfluenceTrees.c SuffSolver.c SuffSolver2.c SuffSolver3.c KBOSuffSolver.c HurdSuffSolver.c PreSolver.c ZwangsGrund.c \
+             Praezedenz.c SymbolGewichte.c simpleLPO.c simpleLPO1.c\
+             simpleLPO2.c simpleLPO3.c simpleLPO37.c simpleLPO4.c simpleLPO40.c \
+             simpleLPO41.c simpleLPO42.c simpleLPO43.c simpleLPO5.c simpleLPO50.c simpleLPO6.c\
+             simpleLPO7.c simpleLPO8.c simpleLPO9.c simpleLPO10.c simpleLPO11.c\
+             simpleLPO100.c \
+             ConfluenceTrees1.c ConfluenceTrees2.c ConfluenceTrees3.c \
+             ConfluenceTrees4.c ConfluenceTrees5.c ConfluenceTrees6.c ConfluenceTrees7.c \
+             ConfluenceTrees8.c \
+             ConfluenceTrees30.c ConfluenceTrees31.c ConfluenceTrees32.c \
+             ConfluenceTrees40.c ConfluenceTrees41.c ConfluenceTrees42.c \
+             ConfluenceTrees50.c ConfluenceTrees51.c ConfluenceTrees52.c \
+             ConfluenceTrees60.c ConfluenceTrees61.c ConfluenceTrees62.c \
+             ConfluenceTrees70.c ConfluenceTrees71.c ConfluenceTrees72.c \
+             ConfluenceTrees80.c \
+             MissMarple.c  Unifikation1.c  Unifikation2.c
+
+ifeq "$(DO_OMEGA)" "1"
+CCE_SRC += wrapper.cc
+endif
+
+ifeq "$(DIR)" "power"
+RUN_SRC += PowerMain.c
+endif
+
+SOURCES := $(ANA_SRC) $(BASIC_SRC) $(CLAS_SRC) $(INF_SRC) $(GOALS_SRC) $(MNF_SRC) \
+	$(NF_SRC) $(ORD_SRC) $(PCL_SRC) $(RUN_SRC) $(SYS_SRC) \
+	$(TPR_SRC) \
+	$(WASIC_SRC) $(WDT_SRC) 
+
+OBJECTS :=  $(filter %o, $(SOURCES:.c=.o)) $(filter %o, $(SOURCES:.cc=.o))  
+ifeq "$(DO_OMEGA)" "1"
+OBJECTS += Exit.o Link.o
+endif
+CCE_OBJ :=  $(filter %o, $(CCE_SRC:.c=.o)) $(filter %o, $(SOURCES:.cc=.o))
+ifeq "$(DO_OMEGA)" "1"
+CCE_OBJ += Exit.o Link.o
+endif
+
+# TOPDIR ist relativ zu den objektfiles!
+ifeq ("$(PRODUCT)", "wm")
+TOPDIR = ../..
+else
+ifeq ("$(PRODUCT)", "cce")
+TOPDIR = ../..
+else
+TOPDIR = ../../../..
+endif # cce
+endif # wm
+
+vpath %.c $(addprefix $(TOPDIR)/sources/, $(SRCDIRS))
+
+
+.PHONY: binaries
+ifeq "$(DIR)" "cce"
+binaries: ccebin
+else
+binaries: wm
+ifeq "$(DIR)" "pcl"
+binaries: wm $(addprefix $(TOPDIR)/bin/, $(PCLPROGS))
+endif
+endif #cce
+
+.PHONY: ccebin
+ccebin: $(TOPDIR)/bin/$(PROGNAME)
+
+.PHONY: wm
+wm: $(TOPDIR)/bin/$(PROGNAME).$(DIR)
+
+
+ifeq (.depend,$(wildcard .depend))
+include .depend
+endif
+$(TOPDIR)/bin/$(PROGNAME).$(DIR): .depend
+
+DFILES := $(wildcard *.d)
+ifneq (0, $(words $(DFILES)))
+include $(DFILES)
+endif
+
+ifeq ($(TOPDIR)/.architecture,$(wildcard $(TOPDIR)/.architecture))
+include $(TOPDIR)/.architecture
+endif
+
+
+## Rules for generation of include/compile.h
+define make-version
+@if [ ! -f .version ]; then \
+	echo 1 > .version; \
+else \
+	expr 0`cat .version` + 1 > .version; \
+fi
+@if [ -f .name ]; then \
+  echo \#define BUILD_VERSION \"\#`cat .version`-`cat .name` \"; \
+else \
+  echo \#define BUILD_VERSION \"\#`cat .version`\";  \
+fi >> .ver
+@echo \#define WM_COMPILE_DATE \"`date `\" >> .ver
+@echo \#define WM_COMPILE_BY \"`whoami`\" >> .ver
+@echo \#define WM_COMPILE_HOST \"`hostname`\" >> .ver
+@if [ -x /bin/dnsdomainname ]; then \
+  echo \#define WM_COMPILE_DOMAIN \"`dnsdomainname`\"; \
+elif [ -x /bin/domainname ]; then \
+  echo \#define WM_COMPILE_DOMAIN \"`domainname`\"; \
+else \
+  echo \#define WM_COMPILE_DOMAIN ; \
+fi >> .ver
+@echo \#define WM_COMPILER \"`$(CC) -v 2>&1 | tail -1`\" >> .ver
+@mv -f .ver compile.h
+endef
+
+# Compile version.c
+define compile-version
+$(CC) $(CPPFLAGS) $(CFLAGS) -o version.o -c $(TOPDIR)/sources/RUN/version.c
+endef
+
+# Flags for all Compiler/OS
+CPPFLAGS=-I. -I$(TOPDIR)/include 
+ifeq "$(DO_OMEGA)" "1"
+CPPFLAGS+= -I$(OMEGA)/omega_lib/include -I$(OMEGA)/basic/include
+endif
+
+LIBS=-lm 
+ifeq "$(DO_OMEGA)" "1"
+LIBS+= -L$(OMEGA)/omega_lib/obj -lomega
+endif
+
+ifeq "$(DIR)" "std"
+CF+=  -DCOMP_OPTIMIERUNG=0 -DCOMP_POWER=0 -DCOMP_COMP=0 #-DCCE_Protocol=1
+endif			   
+ifeq "$(DIR)" "prof"	   
+CF+=  -DCOMP_OPTIMIERUNG=1 -DCOMP_POWER=0 -DCOMP_COMP=0
+endif			   
+ifeq "$(DIR)" "fast"	   
+CF+=  -DCOMP_OPTIMIERUNG=1 -DCOMP_POWER=0 -DCOMP_COMP=0
+endif			   
+ifeq "$(DIR)" "power"	   
+CF+=  -DCOMP_OPTIMIERUNG=1 -DCOMP_POWER=1 -DCOMP_COMP=0
+endif			   
+ifeq "$(DIR)" "comp"	   
+CF+=  -DCOMP_OPTIMIERUNG=1 -DCOMP_POWER=0 -DCOMP_COMP=1
+endif
+
+ifeq "$(DIR)" "cce"
+CF += -DCCE_Source=1
+endif
+
+ifeq "$(DO_OMEGA)" "1"
+CF+= -DDO_OMEGA=1
+else
+CF+= -DDO_OMEGA=0
+endif
+
+# Produktspezifisch
+ifeq "$(DO_OMEGA)" "1"
+CCLINK=$(CCC) 
+else
+CCLINK=$(CC)
+endif
+
+# Fuer power und comp strippen und moeglichst statisch bauen
+# Note: macOS doesn't support -static linking, and uses strip separately
+ifeq ($(DIR), $(findstring $(DIR), power comp))
+ifeq "$(ARCH)" "DARWIN"
+CCLINK= $(CC)
+STRIP_BINARY=1
+else
+CCLINK= $(CC) -s $(if $(findstring $(ARCH), SUNOS5),, -static)
+endif
+endif
+
+
+### PVM-Dinge
+CF+= -DCOMP_DIST=0
+#CF+= -DCOMP_DIST=1 -I/usr/share/pvm3/include
+#CF+= -DCOMP_DIST=1
+#LIBS+= -lpvm3
+#LIBS+= -L/usr/lib/pvm3/lib/LINUX -lpvm3
+
+
+# compiler setup
+CC = gcc
+CCC = g++
+CF += -pipe -MMD
+DEPENDFLAGS = -MM
+OPTFLAGS=-O3
+ifeq "$(DIR)" "std"
+CF+= -Wall -Winline -W -Wmissing-prototypes # -Wstrict-prototypes -Wwrite-strings
+CF+= -ggdb
+# Alles was GCC/ANSI/POSIX zu bieten hat:
+# -D_POSIX_SOURCE -ansi -pedantic -Wall -Wwrite-strings -Wpointer-arith 
+# -Wcast-qual  -Wcast-align -Wtraditional -Wstrict-prototypes 
+# -Wmissing-prototypes -Wnested-externs -Winline -Wshadow
+endif
+
+ifeq "$(DIR)" "cce"
+CF += -ggdb #-Wall -W
+endif
+
+ifeq "$(DIR)" "prof"
+CF+= $(OPTFLAGS) -pg  #-finline-limit=12500 #-fno-strict-aliasing
+endif
+ifeq "$(DIR)" "fast"
+CF+=  $(OPTFLAGS) -fomit-frame-pointer
+endif
+ifeq "$(DIR)" "power"
+CF+= $(OPTFLAGS) -fomit-frame-pointer -Wall -W
+endif
+ifeq "$(DIR)" "comp"
+CF+= $(OPTFLAGS) -fomit-frame-pointer -Wall -W
+endif
+
+
+# OS specific setup
+CF += -D$(ARCH)
+DEPENDFLAGS+=-D$(ARCH)
+ifeq "$(ARCH)" "LINUX"
+CF+= -W
+CF:=$(filter-out -pedantic, $(CF))
+CF:=$(filter-out -ansi, $(CF))
+endif
+
+ifeq "$(ARCH)" "DARWIN"
+# macOS / Apple Silicon support
+CF+= -W
+CF:=$(filter-out -pedantic, $(CF))
+CF:=$(filter-out -ansi, $(CF))
+# Clang doesn't support some GCC-specific flags
+CF:=$(filter-out -ggdb, $(CF))
+CF+= -g
+# Silence some warnings that are noisy in this older codebase
+CF+= -Wno-deprecated-non-prototype -Wno-implicit-function-declaration
+CF+= -Wno-int-conversion -Wno-format
+endif
+
+ifeq "$(ARCH)" "SUNOS5"
+CF+=-D_POSIX_PTHREAD_SEMANTICS
+endif
+
+# Compiler/OS specific setup
+ifeq "$(ARCH).$(DIR)" "LINUX.prof"
+ifneq "$(DO_OMEGA)" "1"
+LIBS:=$(filter-out -lm, $(LIBS)) #auskommentieruen fuer omega (?)
+LIBS+= -profile -lm_p            #auskommentieruen fuer omega (?)
+endif
+CFLAGS+= -profile
+endif
+
+# macOS profiling setup (different from Linux)
+ifeq "$(ARCH).$(DIR)" "DARWIN.prof"
+# Use -pg for gprof-style profiling on macOS (though limited on Apple Silicon)
+CFLAGS+= -pg
+endif
+
+# we are done, CF contains now all Flags that we need
+CFLAGS=$(CF)
+
+ifeq ($(TOPDIR)/lib/Makeconfig-private,$(wildcard $(TOPDIR)/lib/Makeconfig-private))
+include $(TOPDIR)/lib/Makeconfig-private
+endif
+
+$(TOPDIR)/bin/$(PROGNAME): .depend  $(CCE_OBJ)
+	$(make-version)
+	$(compile-version)
+	$(CCLINK) $(CFLAGS) -o $@ $(CCE_OBJ) $(LIBS)
+$(TOPDIR)/bin/$(PROGNAME).$(DIR): .depend $(OBJECTS)
+	$(make-version)
+	$(compile-version)
+	$(CCLINK) $(CFLAGS) -o $@ $(OBJECTS) $(LIBS)
+
+# special files for cce
+wm-lex.c: wm-lex.l wm-parse.tab.h
+	flex -owm-lex.c wm-lex.l
+#	flex -pp -v -owm-lex.c wm-lex.l
+
+wm-parse.tab.h: wm-parse.tab.c
+
+wm-parse.tab.c: wm-parse.y $(TOPDIR)/include/parse-util.h
+	bison -d -v wm-parse.y
+
+wm-lex.l: $(TOPDIR)/sources/PARSE/wm-lex.l
+	cp $(TOPDIR)/sources/PARSE/wm-lex.l .
+
+wm-parse.y: $(TOPDIR)/sources/PARSE/wm-parse.y
+	cp $(TOPDIR)/sources/PARSE/wm-parse.y .
+
+# Rule for objectfiles
+%.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+%.o: %.cc
+	$(CCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+
+wrapper.o: $(TOPDIR)/sources/BASIC/wrapper.cc
+	$(CCC) $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
+
+Exit.o: $(OMEGA)/omega_lib/obj/Exit.o
+	cp $< .
+
+Link.o: $(OMEGA)/omega_lib/obj/Link.o
+	cp $< .
+
+LCFLAGS:=$(filter-out -O3, $(CFLAGS))
+LCFLAGS:=$(filter-out -fomit-frame-pointer, $(LCFLAGS))
+LCFLAGS+=-O0
+
+Lemmata.o: Lemmata.c
+	$(CC) $(CPPFLAGS) $(LCFLAGS) -o $@ -c $<
+
+# Rule for debugging: Expand Macros and compile file
+
+%.i: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -E -C -P -o $@ -c $<
+	indent -i2 -nlp -nfc1 -nce -ncdb -npsl -sob -di0 -d0 -nfc1 -l118 $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -xc -o $*.o -c $*.i
+
+
+%.s: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -S -fverbose-asm -o $@ -c $<
+	$(CC) -o $*.o -c $*.s
+
+
+# Rule to generate PCLprogs
+$(TOPDIR)/bin/%: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^
+
+# Extra rule for version.o
+# without it we get problems if compile.h doesn't exist
+version.o:
+	$(make-version)
+	$(compile-version)
+
+
+.PHONY: depend
+# generate dependencies for Makefile
+depend: $(SOURCES) $(PCLPROGS_SRC)
+# compile.h has to exists - otherwise we get problems
+	$(make-version)
+	for i in $^ ;do \
+		$(CC) $(CPPFLAGS) $(DEPENDFLAGS) $$i ; \
+	done > .tmpdepend
+	mv .tmpdepend .depend
+
+
+# clean directory
+clean:
+	-rm -f .depend .version *.o *.d *.i *.k *.s *.BAK *~ compile.h wm-*
+
+# checking if make depend has been done
+.depend:
+	@touch .depend

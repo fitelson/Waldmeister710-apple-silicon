@@ -1,0 +1,20 @@
+Statistiken.o: ../../sources/RUN/Statistiken.c \
+  ../../include/antiwarnings.h ../../include/compiler-extra.h \
+  ../../include/Ausgaben.h ../../include/SymbolOperationen.h \
+  ../../include/general.h ../../include/FehlerBehandlung.h \
+  ../../include/TermOperationen.h ../../include/parser.h \
+  ../../include/SpeicherVerwaltung.h ../../include/SpeicherParameter.h \
+  ../../include/Statistiken.h ../../include/DSBaumAusgaben.h \
+  ../../include/DSBaumKnoten.h ../../include/Termpaare.h \
+  ../../include/Id.h ../../include/Position.h \
+  ../../include/DSBaumOperationen.h ../../include/Interreduktion.h \
+  ../../include/RUndEVerwaltung.h ../../include/KPVerwaltung.h \
+  ../../include/ClasHeuristics.h ../../include/MatchOperationen.h \
+  ../../include/MNF.h ../../include/NewClassification.h \
+  ../../include/InfoStrings.h ../../include/ClasFunctions.h \
+  ../../include/NFBildung.h ../../include/Parameter.h \
+  ../../include/Signale.h ../../include/TermIteration.h \
+  ../../include/TermVerfolgung.h ../../include/Unifikation1.h \
+  ../../include/Unifikation2.h ../../include/ZeitMessung.h \
+  ../../include/Zielverwaltung.h ../../include/version.h \
+  ../../include/WaldmeisterII.h ../../include/Communication.h

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(make clean:*)",
+      "Bash(make:*)",
+      "Bash(./bin/WaldmeisterII.fast:*)",
+      "Bash(printf:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

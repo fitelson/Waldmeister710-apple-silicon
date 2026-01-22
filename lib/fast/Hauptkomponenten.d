@@ -1,0 +1,22 @@
+Hauptkomponenten.o: ../../sources/INF/Hauptkomponenten.c \
+  ../../include/antiwarnings.h ../../include/compiler-extra.h \
+  ../../include/general.h ../../include/Ausgaben.h \
+  ../../include/SymbolOperationen.h ../../include/FehlerBehandlung.h \
+  ../../include/TermOperationen.h ../../include/parser.h \
+  ../../include/SpeicherVerwaltung.h ../../include/SpeicherParameter.h \
+  ../../include/Statistiken.h ../../include/Communication.h \
+  ../../include/Dispatcher.h ../../include/RUndEVerwaltung.h \
+  ../../include/DSBaumKnoten.h ../../include/Termpaare.h \
+  ../../include/Id.h ../../include/Position.h \
+  ../../include/KDHeapElements.h ../../include/DCommunicator.h \
+  ../../include/DSBaumOperationen.h ../../include/Hauptkomponenten.h \
+  ../../include/XFilesFuerPMh.h ../../include/Interreduktion.h \
+  ../../include/Konsulat.h ../../include/KPVerwaltung.h \
+  ../../include/ClasHeuristics.h ../../include/Lemmata.h \
+  ../../include/LispLists.h ../../include/MissMarple.h \
+  ../../include/NFBildung.h ../../include/InfoStrings.h \
+  ../../include/Ordnungen.h ../../include/Parameter.h \
+  ../../include/PhilMarlow.h ../../include/Signale.h \
+  ../../include/SpezNormierung.h ../../include/Stringterms.h \
+  ../../include/Subsumption.h ../../include/Unifikation1.h \
+  ../../include/WaldmeisterII.h ../../include/Zielverwaltung.h
