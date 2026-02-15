@@ -1,0 +1,21 @@
+# Build artifacts
+*.o
+*.d
+*.a
+
+# Generated files
+.depend
+.version
+compile.h
+
+# Binaries
+bin/waldmeister
+bin/WaldmeisterII.fast
+bin/WaldmeisterII.std
+bin/*.zip
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/
