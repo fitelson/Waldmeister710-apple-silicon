@@ -125,6 +125,15 @@ The resulting binary will be native to the current machine:
 - Apple Silicon: `Mach-O 64-bit executable arm64`
 - Intel Mac: `Mach-O 64-bit executable x86_64`
 
+## Original Authors
+
+- **Arnim Buch**
+- **Thomas Hillenbrand**
+- **Alexander Jaeger**
+- **Bernd Löchner**
+
+Copyright (C) 1994-2002. See `sources/RUN/PowerMain.c` for the original copyright notice.
+
 ## Port History
 
 | Date | Target | Notes |
